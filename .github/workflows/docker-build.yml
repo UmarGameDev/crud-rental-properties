@@ -1,0 +1,69 @@
+name: Build with Docker Compose
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # GitHub uses Ubuntu runners
+    
+    steps:
+    # Step 1: Checkout code
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    # Step 2: Build with Docker Compose
+    - name: Build Docker images
+      run: |
+        echo "🚀 Building Docker images..."
+        docker-compose build
+        
+        echo "✅ Images built:"
+        docker images | grep crud-rental-properties
+        
+    # Step 3: Verify images
+    - name: Test Docker images
+      run: |
+        echo "🧪 Testing images..."
+        
+        # Test backend
+        echo "Testing backend..."
+        docker run --rm crud-rental-properties-backend python --version
+        
+        # Test frontend
+        echo "Testing frontend..."
+        docker run --rm crud-rental-properties-frontend python --version
+        
+    # Step 4: Save images as artifacts
+    - name: Save images for download
+      run: |
+        echo "💾 Saving images..."
+        
+        # Save backend
+        docker save -o backend.tar crud-rental-properties-backend:latest
+        
+        # Save frontend
+        docker save -o frontend.tar crud-rental-properties-frontend:latest
+        
+        echo "📦 Files created:"
+        ls -la *.tar
+        
+    # Step 5: Upload for download
+    - name: Upload Docker images
+      uses: actions/upload-artifact@v3
+      with:
+        name: docker-images
+        path: |
+          *.tar
+        retention-days: 7
+        
+    # Step 6: Simple success message
+    - name: Build Complete
+      run: |
+        echo "🎉 BUILD STAGE COMPLETE!"
+        echo "Images built:"
+        docker images | grep crud
+        echo "Artifacts available for download in GitHub Actions"
