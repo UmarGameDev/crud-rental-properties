@@ -1,92 +1,20 @@
-name: Build with Docker Compose
+name: Simple Docker Compose Build
 
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+on: push
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-    # Step 1: Checkout code
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Compose
+      uses: docker/setup-buildx-action@v2
       
-    # Step 2: Build with Docker Compose
-    - name: Build Docker images
+    - name: Build with Docker Compose
       run: |
-        echo "🚀 Building Docker images..."
+        echo "Building images..."
         docker-compose build
-        
-        echo "✅ Images built:"
-        docker images | grep crud-rental-properties || echo "No images with 'crud-rental-properties'"
-        
-    # Step 3: Check image names
-    - name: List all Docker images
-      run: |
-        echo "📋 All Docker images:"
+        echo "Images:"
         docker images
-        
-    # Step 4: Save images
-    - name: Save images as tar files
-      run: |
-        echo "💾 Saving images..."
-        
-        # Check which images exist and save them
-        IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "(crud|backend|frontend)")
-        
-        for image in $IMAGES; do
-          filename=$(echo $image | sed 's/[:/]/_/g').tar
-          echo "Saving $image as $filename"
-          docker save -o $filename $image
-        done
-        
-        echo "📦 Files created:"
-        ls -la *.tar || echo "No tar files created"
-        
-    # Step 5: Upload artifacts (v4)
-    - name: Upload Docker images
-      uses: actions/upload-artifact@v4
-      with:
-        name: docker-images
-        path: |
-          *.tar
-        retention-days: 7
-        
-    # Step 6: Build report
-    - name: Create Build Report
-      run: |
-        echo "# Docker Compose Build Report" > build-report.md
-        echo "## Status: SUCCESS" >> build-report.md
-        echo "## Timestamp: $(date)" >> build-report.md
-        echo "## Commit: ${{ github.sha }}" >> build-report.md
-        echo "## Workflow: ${{ github.workflow }}" >> build-report.md
-        echo "" >> build-report.md
-        echo "## Command Executed:" >> build-report.md
-        echo "\`\`\`bash" >> build-report.md
-        echo "docker-compose build" >> build-report.md
-        echo "\`\`\`" >> build-report.md
-        echo "" >> build-report.md
-        echo "## Docker Images Created:" >> build-report.md
-        echo "\`\`\`" >> build-report.md
-        docker images | grep -E "(REPOSITORY|crud|backend|frontend)" >> build-report.md || echo "No matching images" >> build-report.md
-        echo "\`\`\`" >> build-report.md
-        
-        cat build-report.md
-        
-    # Step 7: Upload report
-    - name: Upload Build Report
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-documents
-        path: build-report.md
-        
-    # Step 8: Success message
-    - name: Build Complete
-      run: |
-        echo "🎉 BUILD STAGE COMPLETE!"
-        echo "✅ Docker Compose build successful"
-        echo "📦 Artifacts available for download"
