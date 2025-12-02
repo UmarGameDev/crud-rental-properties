@@ -1,0 +1,62 @@
+# Docker Build Configuration
+# GitHub Actions CI/CD Pipeline
+
+# Backend Service (FastAPI)
+backend:
+  context: ./backend
+  dockerfile: Dockerfile
+  image_name: crud-backend
+  tags:
+    - "latest"
+    - "${GITHUB_SHA}"
+  build_args:
+    - PYTHON_VERSION=3.11
+  dependencies:
+    - fastapi
+    - uvicorn
+    - sqlalchemy
+    - asyncpg
+    - pydantic
+    - alembic
+
+# Frontend Service (Streamlit)
+frontend:
+  context: ./frontend
+  dockerfile: Dockerfile
+  image_name: crud-frontend
+  tags:
+    - "latest"
+    - "${GITHUB_SHA}"
+  build_args:
+    - PYTHON_VERSION=3.11
+  dependencies:
+    - streamlit
+    - requests
+    - pandas
+
+# Database Service
+database:
+  image: postgres:15-alpine
+  environment:
+    - POSTGRES_DB=properties
+    - POSTGRES_USER=admin
+    - POSTGRES_PASSWORD=secret
+
+# Build Stages
+stages:
+  1: Dependency Installation
+  2: Code Compilation
+  3: Docker Image Creation
+  4: Artifact Generation
+
+# Artifacts to Generate
+artifacts:
+  - name: backend-image
+    type: docker-tar
+    pattern: "backend-*.tar"
+  - name: frontend-image
+    type: docker-tar
+    pattern: "frontend-*.tar"
+  - name: build-report
+    type: markdown
+    pattern: "build-report.md"

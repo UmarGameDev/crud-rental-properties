@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline - All Stages
 
 on:
   push:
@@ -7,84 +7,180 @@ on:
     branches: [ main ]
 
 jobs:
+  # ========== STAGE 1: SOURCE ==========
   source-stage:
     runs-on: ubuntu-latest
     name: "Stage 1: Source & Trigger"
+    outputs:
+      commit_sha: ${{ github.sha }}
+      branch_name: ${{ github.ref_name }}
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       
-    - name: GitHub Actions Trigger Info
+    - name: Source Stage Info
       run: |
-        echo "=== GITHUB ACTIONS TRIGGER ==="
+        echo "=== SOURCE STAGE ==="
         echo "Event: ${{ github.event_name }}"
         echo "Repository: ${{ github.repository }}"
         echo "SHA: ${{ github.sha }}"
-        echo "Ref: ${{ github.ref }}"
+        echo "Branch: ${{ github.ref_name }}"
         echo "Actor: ${{ github.actor }}"
-        echo "Workflow: ${{ github.workflow }}"
         
-    - name: Simulate Jenkins Webhook Integration
+    - name: Generate Source Report
       run: |
-        echo "=== JENKINS WEBHOOK SIMULATION ==="
-        echo "📡 If Jenkins was publicly accessible:"
-        echo "Webhook URL: https://jenkins.yourcompany.com/github-webhook/"
-        echo "HTTP Method: POST"
-        echo "Content-Type: application/json"
-        echo ""
-        echo "📦 Sample Webhook Payload:"
-        cat << EOF
-        {
-          "ref": "${{ github.ref }}",
-          "repository": {
-            "full_name": "${{ github.repository }}",
-            "html_url": "https://github.com/${{ github.repository }}"
-          },
-          "pusher": {
-            "name": "${{ github.actor }}"
-          },
-          "head_commit": {
-            "id": "${{ github.sha }}",
-            "message": "${{ github.event.head_commit.message }}",
-            "timestamp": "${{ github.event.head_commit.timestamp }}"
-          }
-        }
-        EOF
+        echo "# Source Stage Report" > source-report.md
+        echo "## Status: COMPLETED" >> source-report.md
+        echo "## Timestamp: $(date)" >> source-report.md
+        echo "## Repository: ${{ github.repository }}" >> source-report.md
+        echo "## Commit: ${{ github.sha }}" >> source-report.md
+        echo "## Trigger: ${{ github.event_name }}" >> source-report.md
+        echo "## Next: Build Stage" >> source-report.md
         
-    - name: Generate Webhook Documentation
+    - name: Upload Source Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: source-documents
+        path: source-report.md
+
+  # ========== STAGE 2: BUILD ==========
+  build-stage:
+    runs-on: ubuntu-latest
+    name: "Stage 2: Build & Docker Images"
+    needs: source-stage
+    if: success()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup build environment
       run: |
-        echo "Creating webhook configuration documentation..."
-        cat << 'EOF' > webhook-config.md
-        # Jenkins-GitHub Webhook Configuration
+        echo "=== BUILD ENVIRONMENT ==="
+        echo "Python version:"
+        python --version
+        echo "Docker version:"
+        docker --version
+        echo "Docker Compose version:"
+        docker-compose --version
         
-        ## GitHub Webhook Settings (Simulated)
-        - **Payload URL**: https://jenkins-server.example.com/github-webhook/
-        - **Content type**: application/json
-        - **Events**: Push, Pull Request
-        - **Secret**: [configured-in-jenkins]
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
         
-        ## Jenkins Configuration
-        1. Jenkins → Manage Jenkins → Configure System
-        2. GitHub Section → Add GitHub Server
-        3. API URL: https://api.github.com
-        4. Credentials: GitHub Token with repo permissions
-        5. Check "Manage hooks"
-        
-        ## Pipeline Triggers
-        In Jenkins job configuration:
-        - ✅ "GitHub hook trigger for GITScm polling"
-        - This enables automatic builds on push
-        EOF
-        
-    - name: Create Jenkins Trigger Log
+    - name: Install Poetry
       run: |
-        echo "Jenkins would be triggered at: $(date)" > jenkins-webhook.log
-        echo "Repository: ${{ github.repository }}" >> jenkins-webhook.log
-        echo "Commit: ${{ github.sha }}" >> jenkins-webhook.log
-        echo "Event: ${{ github.event_name }}" >> jenkins-webhook.log
-        echo "" >> jenkins-webhook.log
-        echo "✅ Source Stage Complete: Both GitHub Actions and Jenkins triggers configured"
-        cat jenkins-webhook.log
+        pip install poetry
+        poetry --version
         
-  # We'll add Build, Test, Staging, Deploy stages in subsequent steps
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: |
+        poetry install --no-interaction --no-ansi
+        
+    - name: Build Docker images with Docker Compose
+      run: |
+        echo "Building Docker images..."
+        docker-compose build --no-cache
+        
+        echo "Images built:"
+        docker images | grep crud-rental-properties
+        
+    - name: Tag Docker images
+      run: |
+        echo "Tagging Docker images..."
+        docker tag crud-rental-properties-backend:latest crud-backend:${{ github.sha }}
+        docker tag crud-rental-properties-frontend:latest crud-frontend:${{ github.sha }}
+        
+        echo "Current Docker images:"
+        docker images | grep -E "(crud-backend|crud-frontend)"
+        
+    - name: Save Docker images as artifacts
+      run: |
+        echo "Saving Docker images to tar files..."
+        docker save -o backend-image-${{ github.sha }}.tar crud-backend:${{ github.sha }}
+        docker save -o frontend-image-${{ github.sha }}.tar crud-frontend:${{ github.sha }}
+        
+        echo "Created artifact files:"
+        ls -la *.tar
+        
+    - name: Create Build Report
+      run: |
+        echo "# Build Stage Report" > build-report.md
+        echo "## Status: SUCCESS" >> build-report.md
+        echo "## Timestamp: $(date)" >> build-report.md
+        echo "## Build ID: ${{ github.run_id }}" >> build-report.md
+        echo "## Commit: ${{ github.sha }}" >> build-report.md
+        echo "## Images Built:" >> build-report.md
+        echo "" >> build-report.md
+        echo "### Backend (FastAPI)" >> build-report.md
+        echo "- Tag: crud-backend:${{ github.sha }}" >> build-report.md
+        echo "- Tag: crud-backend:latest" >> build-report.md
+        echo "- Size: $(docker images --format "{{.Size}}" crud-backend:${{ github.sha }})" >> build-report.md
+        echo "" >> build-report.md
+        echo "### Frontend (Streamlit)" >> build-report.md
+        echo "- Tag: crud-frontend:${{ github.sha }}" >> build-report.md
+        echo "- Tag: crud-frontend:latest" >> build-report.md
+        echo "- Size: $(docker images --format "{{.Size}}" crud-frontend:${{ github.sha }})" >> build-report.md
+        echo "" >> build-report.md
+        echo "## Artifacts Created:" >> build-report.md
+        echo "- backend-image-${{ github.sha }}.tar" >> build-report.md
+        echo "- frontend-image-${{ github.sha }}.tar" >> build-report.md
+        echo "" >> build-report.md
+        echo "## Dependencies:" >> build-report.md
+        echo "- Python 3.11" >> build-report.md
+        echo "- Poetry for dependency management" >> build-report.md
+        echo "- PostgreSQL (database)" >> build-report.md
+        echo "" >> build-report.md
+        echo "## Next Stage: Testing" >> build-report.md
+        
+        cat build-report.md
+        
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-artifacts
+        path: |
+          *.tar
+          build-report.md
+        retention-days: 7
+        
+    - name: Upload Docker Images to GitHub Container Registry (Optional)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "This step would push to GitHub Container Registry"
+        echo "Images ready for:"
+        echo "- crud-backend:${{ github.sha }}"
+        echo "- crud-frontend:${{ github.sha }}"
+        echo "To enable, add GitHub token with packages:write permission"
+        
+    - name: Build Stage Complete
+      run: |
+        echo "✅ BUILD STAGE COMPLETED SUCCESSFULLY!"
+        echo "📦 Docker images created:"
+        docker images | grep crud
+        echo "📁 Artifacts saved for testing stage"
+        echo "🔜 Next: Test Stage"
+
+  # ========== STAGE 3: TEST (Coming Next) ==========
+  test-stage:
+    runs-on: ubuntu-latest
+    name: "Stage 3: Testing"
+    needs: build-stage
+    if: success()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Test Stage Placeholder
+      run: |
+        echo "=== TEST STAGE ==="
+        echo "Test stage will be implemented next"
+        echo "Will include:"
+        echo "- Unit tests (Pytest)"
+        echo "- Integration tests"
+        echo "- API endpoint testing"
+        echo "This stage depends on successful build"
