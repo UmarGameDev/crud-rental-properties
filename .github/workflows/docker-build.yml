@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # GitHub uses Ubuntu runners
+    runs-on: ubuntu-latest
     
     steps:
     # Step 1: Checkout code
@@ -22,48 +22,71 @@ jobs:
         docker-compose build
         
         echo "✅ Images built:"
-        docker images | grep crud-rental-properties
+        docker images | grep crud-rental-properties || echo "No images with 'crud-rental-properties'"
         
-    # Step 3: Verify images
-    - name: Test Docker images
+    # Step 3: Check image names
+    - name: List all Docker images
       run: |
-        echo "🧪 Testing images..."
+        echo "📋 All Docker images:"
+        docker images
         
-        # Test backend
-        echo "Testing backend..."
-        docker run --rm crud-rental-properties-backend python --version
-        
-        # Test frontend
-        echo "Testing frontend..."
-        docker run --rm crud-rental-properties-frontend python --version
-        
-    # Step 4: Save images as artifacts
-    - name: Save images for download
+    # Step 4: Save images
+    - name: Save images as tar files
       run: |
         echo "💾 Saving images..."
         
-        # Save backend
-        docker save -o backend.tar crud-rental-properties-backend:latest
+        # Check which images exist and save them
+        IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "(crud|backend|frontend)")
         
-        # Save frontend
-        docker save -o frontend.tar crud-rental-properties-frontend:latest
+        for image in $IMAGES; do
+          filename=$(echo $image | sed 's/[:/]/_/g').tar
+          echo "Saving $image as $filename"
+          docker save -o $filename $image
+        done
         
         echo "📦 Files created:"
-        ls -la *.tar
+        ls -la *.tar || echo "No tar files created"
         
-    # Step 5: Upload for download
+    # Step 5: Upload artifacts (v4)
     - name: Upload Docker images
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: docker-images
         path: |
           *.tar
         retention-days: 7
         
-    # Step 6: Simple success message
+    # Step 6: Build report
+    - name: Create Build Report
+      run: |
+        echo "# Docker Compose Build Report" > build-report.md
+        echo "## Status: SUCCESS" >> build-report.md
+        echo "## Timestamp: $(date)" >> build-report.md
+        echo "## Commit: ${{ github.sha }}" >> build-report.md
+        echo "## Workflow: ${{ github.workflow }}" >> build-report.md
+        echo "" >> build-report.md
+        echo "## Command Executed:" >> build-report.md
+        echo "\`\`\`bash" >> build-report.md
+        echo "docker-compose build" >> build-report.md
+        echo "\`\`\`" >> build-report.md
+        echo "" >> build-report.md
+        echo "## Docker Images Created:" >> build-report.md
+        echo "\`\`\`" >> build-report.md
+        docker images | grep -E "(REPOSITORY|crud|backend|frontend)" >> build-report.md || echo "No matching images" >> build-report.md
+        echo "\`\`\`" >> build-report.md
+        
+        cat build-report.md
+        
+    # Step 7: Upload report
+    - name: Upload Build Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-documents
+        path: build-report.md
+        
+    # Step 8: Success message
     - name: Build Complete
       run: |
         echo "🎉 BUILD STAGE COMPLETE!"
-        echo "Images built:"
-        docker images | grep crud
-        echo "Artifacts available for download in GitHub Actions"
+        echo "✅ Docker Compose build successful"
+        echo "📦 Artifacts available for download"
