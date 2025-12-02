@@ -1,0 +1,22 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Print CI Trigger Info
+      run: |
+        echo "🚀 Pipeline triggered by: ${{ github.event_name }}"
+        echo "📝 Commit SHA: ${{ github.sha }}"
+        echo "👤 Triggered by: ${{ github.actor }}"
+        echo "🌿 Branch: ${{ github.ref }}"
