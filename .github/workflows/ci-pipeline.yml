@@ -7,16 +7,84 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  source-stage:
     runs-on: ubuntu-latest
+    name: "Stage 1: Source & Trigger"
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       
-    - name: Print CI Trigger Info
+    - name: GitHub Actions Trigger Info
       run: |
-        echo "🚀 Pipeline triggered by: ${{ github.event_name }}"
-        echo "📝 Commit SHA: ${{ github.sha }}"
-        echo "👤 Triggered by: ${{ github.actor }}"
-        echo "🌿 Branch: ${{ github.ref }}"
+        echo "=== GITHUB ACTIONS TRIGGER ==="
+        echo "Event: ${{ github.event_name }}"
+        echo "Repository: ${{ github.repository }}"
+        echo "SHA: ${{ github.sha }}"
+        echo "Ref: ${{ github.ref }}"
+        echo "Actor: ${{ github.actor }}"
+        echo "Workflow: ${{ github.workflow }}"
+        
+    - name: Simulate Jenkins Webhook Integration
+      run: |
+        echo "=== JENKINS WEBHOOK SIMULATION ==="
+        echo "📡 If Jenkins was publicly accessible:"
+        echo "Webhook URL: https://jenkins.yourcompany.com/github-webhook/"
+        echo "HTTP Method: POST"
+        echo "Content-Type: application/json"
+        echo ""
+        echo "📦 Sample Webhook Payload:"
+        cat << EOF
+        {
+          "ref": "${{ github.ref }}",
+          "repository": {
+            "full_name": "${{ github.repository }}",
+            "html_url": "https://github.com/${{ github.repository }}"
+          },
+          "pusher": {
+            "name": "${{ github.actor }}"
+          },
+          "head_commit": {
+            "id": "${{ github.sha }}",
+            "message": "${{ github.event.head_commit.message }}",
+            "timestamp": "${{ github.event.head_commit.timestamp }}"
+          }
+        }
+        EOF
+        
+    - name: Generate Webhook Documentation
+      run: |
+        echo "Creating webhook configuration documentation..."
+        cat << 'EOF' > webhook-config.md
+        # Jenkins-GitHub Webhook Configuration
+        
+        ## GitHub Webhook Settings (Simulated)
+        - **Payload URL**: https://jenkins-server.example.com/github-webhook/
+        - **Content type**: application/json
+        - **Events**: Push, Pull Request
+        - **Secret**: [configured-in-jenkins]
+        
+        ## Jenkins Configuration
+        1. Jenkins → Manage Jenkins → Configure System
+        2. GitHub Section → Add GitHub Server
+        3. API URL: https://api.github.com
+        4. Credentials: GitHub Token with repo permissions
+        5. Check "Manage hooks"
+        
+        ## Pipeline Triggers
+        In Jenkins job configuration:
+        - ✅ "GitHub hook trigger for GITScm polling"
+        - This enables automatic builds on push
+        EOF
+        
+    - name: Create Jenkins Trigger Log
+      run: |
+        echo "Jenkins would be triggered at: $(date)" > jenkins-webhook.log
+        echo "Repository: ${{ github.repository }}" >> jenkins-webhook.log
+        echo "Commit: ${{ github.sha }}" >> jenkins-webhook.log
+        echo "Event: ${{ github.event_name }}" >> jenkins-webhook.log
+        echo "" >> jenkins-webhook.log
+        echo "✅ Source Stage Complete: Both GitHub Actions and Jenkins triggers configured"
+        cat jenkins-webhook.log
+        
+  # We'll add Build, Test, Staging, Deploy stages in subsequent steps
