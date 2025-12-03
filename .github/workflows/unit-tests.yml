@@ -27,15 +27,15 @@ jobs:
           echo ""
           
           echo "1. Testing CRUD operations..."
-          python tests/test_crud.py
+          python tests/unit/test_crud.py
           
           echo ""
           echo "2. Testing Database models..."
-          python tests/test_models.py
+          python tests/unit/test_models.py
           
           echo ""
           echo "3. Testing Schema validation..."
-          python tests/test_schemas.py
+          python tests/unit/test_schemas.py
         } 2>&1 | tee test_output.log
         
         # Check if tests passed
