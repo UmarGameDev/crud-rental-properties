@@ -16,26 +16,33 @@ jobs:
     
     - name: Install packages
       run: |
-        pip install fastapi sqlalchemy pydantic pytest aiosqlite
+        pip install fastapi sqlalchemy[asyncio] pydantic pytest pytest-asyncio aiosqlite
     
     - name: Run unit tests
       run: |
+        # Set Python path to include project root
+        export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+        echo "PYTHONPATH set to: $PYTHONPATH"
+        
         # Save all test output to a file
         {
           echo "=== UNIT TEST RESULTS ==="
           echo "Run date: $(date)"
+          echo "Working directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
           echo ""
           
           echo "1. Testing CRUD operations..."
-          python tests/unit/test_crud.py
+          cd tests/unit && python test_crud.py
           
           echo ""
           echo "2. Testing Database models..."
-          python tests/unit/test_models.py
+          cd ../.. && cd tests/unit && python test_models.py
           
           echo ""
           echo "3. Testing Schema validation..."
-          python tests/unit/test_schemas.py
+          cd ../.. && cd tests/unit && python test_schemas.py
         } 2>&1 | tee test_output.log
         
         # Check if tests passed
