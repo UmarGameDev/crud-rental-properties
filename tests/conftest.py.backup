@@ -1,6 +1,5 @@
 import pytest
 from httpx import AsyncClient
-from httpx._transports.asgi import ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -12,6 +11,7 @@ from backend.model import Property, table_registry
 @pytest.fixture(scope='session')
 def engine():
     _engine = create_async_engine('sqlite+aiosqlite:///:memory:', future=True)
+
     return _engine
 
 
@@ -43,11 +43,7 @@ async def client(session):
 
     app.dependency_overrides[get_session] = get_session_override
 
-    # FIXED: Use ASGITransport instead of app parameter
-    async with AsyncClient(
-        transport=ASGITransport(app=app), 
-        base_url='http://test'
-    ) as client:
+    async with AsyncClient(app=app, base_url='http://localhost') as client:
         yield client
 
     app.dependency_overrides.clear()

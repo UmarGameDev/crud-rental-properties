@@ -11,7 +11,8 @@ RUN poetry install --only backend --no-root --no-interaction --no-ansi
 
 COPY backend/ backend/
 
+RUN sed -i 's/\r$//' backend/entrypoint.sh
+
 EXPOSE 8000
 
 ENTRYPOINT ["sh", "/rental-crud/backend/entrypoint.sh"]
-

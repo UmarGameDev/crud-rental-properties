@@ -1,48 +1,50 @@
+version: "3.9"
+
 services:
   rental_database:
-    image: postgres
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+    image: postgres:18
+    restart: always
     environment:
       POSTGRES_USER: app_user
       POSTGRES_DB: app_db
       POSTGRES_PASSWORD: app_password
+    volumes:
+      - pgdata:/var/lib/postgresql   # ✔ FIX for Postgres 18+
     ports:
       - "5432:5432"
     networks:
       - mynetwork
-  
+
   backend:
-    build: 
+    build:
       context: .
       dockerfile: backend/Dockerfile
-    entrypoint: ./backend/entrypoint.sh
-    volumes:
-      - ./backend:/rental-crud/backend
+    restart: always
     environment:
-      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://app_user:app_password@rental_database:5432/app_db}"
+      DATABASE_URL: "postgresql+asyncpg://app_user:app_password@rental_database:5432/app_db"
     ports:
       - "8000:8000"
     depends_on:
       - rental_database
     networks:
       - mynetwork
-      
+    # ❌ REMOVE bind mount
+    # ❌ REMOVE entrypoint override
+
   frontend:
-    build: 
+    build:
       context: .
       dockerfile: frontend/Dockerfile
-    volumes:
-      - ./frontend:/rental-crud/frontend
+    restart: always
     ports:
       - "8501:8501"
     networks:
       - mynetwork
-  
+    # ❌ REMOVE bind mount
+
 networks:
   mynetwork:
-      driver: bridge
+    driver: bridge
 
 volumes:
   pgdata:
-  pgadmin-data:
