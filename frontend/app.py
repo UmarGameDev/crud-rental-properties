@@ -1,15 +1,21 @@
+import sys
+from pathlib import Path
+
+# THIS IS THE FIX FOR STREAMLIT CLOUD
+sys.path.append(str(Path(__file__).parent.parent))
+
 from http import HTTPStatus
 import os
 import pandas as pd
 import requests
 import streamlit as st
-from frontend.response import show_response_message
+from frontend.response import show_response_message  # Now works everywhere
 
 # Streamlit page config
 st.set_page_config(layout='wide')
 st.title('Rental Property Inventory App')
 
-# Backend URL from environment variable (fallback to Railway backend)
+# Backend URL from environment variable (fallback to your backend)
 BACKEND_URL = os.getenv("BACKEND_URL", "https://rental-backend.com/")
 
 # Add a new property
@@ -89,11 +95,11 @@ with st.expander('Update a Listed Property'):
         update_button = st.form_submit_button('Update Property')
         if update_button:
             update_data = {key: value for key, value in new_data.items() if value}
-            if update_data:
+            if 'id' in update_data:
                 response = requests.patch(
-                    f"{BACKEND_URL}/property/{update_data.get('id')}",
+                    f"{BACKEND_URL}/property/{update_data.pop('id')}",
                     json=update_data,
                 )
                 show_response_message(response)
             else:
-                st.error('No changes were made as none of the fields were filled')
+                st.error('Property ID is required for update')

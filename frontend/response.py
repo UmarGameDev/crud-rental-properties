@@ -17,5 +17,7 @@ def show_response_message(response):
                     st.error(f'Erro: {errors}')
                 else:
                     st.error(f"Erro: {data['detail']}")
+            else:
+                st.error(f'Error {response.status_code}: {response.text}')
         except ValueError:
             st.error('Unknown error. Unable to decode the response.')
