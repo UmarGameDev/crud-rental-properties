@@ -10,7 +10,7 @@ st.set_page_config(layout='wide')
 st.title('Rental Property Inventory App')
 
 # Backend URL from environment variable (fallback to Railway backend)
-BACKEND_URL = os.getenv("BACKEND_URL", "https://qug1bm20.up.railway.app")
+BACKEND_URL = os.getenv("BACKEND_URL", "https://rental-backend.com/")
 
 # Add a new property
 with st.expander('Add a new property unit'):
