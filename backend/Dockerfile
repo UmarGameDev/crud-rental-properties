@@ -8,6 +8,7 @@ RUN pip install poetry
 
 RUN poetry config installer.max-workers 10
 RUN poetry install --only backend --no-root --no-interaction --no-ansi
+RUN pip install pydantic-settings==2.5.1
 
 COPY backend/ backend/
 
