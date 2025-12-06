@@ -1,9 +1,5 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
+import os
+from pydantic import BaseSettings
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file='.env', env_file_encoding='utf-8', extra='allow'
-    )
-
-    DATABASE_URL: str = 'sqlite+aiosqlite:///./db.db'
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./test.db")

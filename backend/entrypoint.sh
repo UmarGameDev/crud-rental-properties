@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Executa as migrações do banco de dados
+# Run database migrations
 poetry run alembic upgrade head
 
-# Inicia a aplicação
+# Start the FastAPI app
 poetry run uvicorn --host 0.0.0.0 --port 8000 backend.main:app
