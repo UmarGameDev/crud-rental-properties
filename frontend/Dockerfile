@@ -18,4 +18,4 @@ COPY frontend/ frontend/
 
 EXPOSE 8501
 
-CMD poetry run streamlit run frontend/app.py --server.address=0.0.0.0 --server.port=$PORT
+CMD ["poetry", "run", "streamlit", "run", "frontend/app.py", "--server.address=0.0.0.0"]
