@@ -1,21 +1,23 @@
 from http import HTTPStatus
-
+import os
 import pandas as pd
 import requests
 import streamlit as st
-
 from frontend.response import show_response_message
 
+# Streamlit page config
 st.set_page_config(layout='wide')
-
 st.title('Rental Property Inventory App')
 
+# Backend URL from environment variable (fallback to Railway backend)
+BACKEND_URL = os.getenv("BACKEND_URL", "https://qug1bm20.up.railway.app")
+
+# Add a new property
 with st.expander('Add a new property unit'):
     with st.form('new_item'):
         description = st.text_input('Description')
         number_bedrooms = st.selectbox(
-            'Number Bedrooms',
-            ['T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T6+'],
+            'Number Bedrooms', ['T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T6+']
         )
         price = st.text_input('Price (€)')
         area = st.text_input('Area (m2)')
@@ -24,7 +26,7 @@ with st.expander('Add a new property unit'):
 
         if submit_button:
             response = requests.post(
-                'http://backend:8000/property/',
+                f'{BACKEND_URL}/property/',
                 json={
                     'description': description,
                     'number_bedrooms': number_bedrooms,
@@ -33,103 +35,65 @@ with st.expander('Add a new property unit'):
                     'location': location,
                 },
             )
-
             show_response_message(response)
 
-
+# View all properties
 with st.expander('View All Listed Properties'):
     if st.button('Show All Properties'):
-        response = requests.get('http://backend:8000/property/')
+        response = requests.get(f'{BACKEND_URL}/property/')
         if response.status_code == HTTPStatus.OK:
-            properties = response.json()['properties']
+            properties = response.json().get('properties', [])
             if properties:
                 df = pd.DataFrame(properties)
-                df = df[
-                    [
-                        'id',
-                        'description',
-                        'number_bedrooms',
-                        'price',
-                        'area',
-                        'location',
-                    ]
-                ]
-
+                df = df[['id','description','number_bedrooms','price','area','location']]
                 st.write(df.to_html(index=False), unsafe_allow_html=True)
             else:
                 st.error('There are no properties registered.')
         else:
             show_response_message(response)
 
-
+# Search property by ID
 with st.expander('Search for a Listed Property'):
     get_id = st.number_input('Property ID', min_value=1, format='%d')
     if st.button('Search Property'):
-        response = requests.get(f'http://backend:8000/property/{get_id}')
+        response = requests.get(f'{BACKEND_URL}/property/{get_id}')
         if response.status_code == HTTPStatus.OK:
             property = response.json()
             df = pd.DataFrame([property])
-
-            df = df[
-                [
-                    'id',
-                    'description',
-                    'number_bedrooms',
-                    'price',
-                    'area',
-                    'location',
-                ]
-            ]
-
+            df = df[['id','description','number_bedrooms','price','area','location']]
             st.write(df.to_html(index=False), unsafe_allow_html=True)
         else:
             show_response_message(response)
 
-
+# Delete a property
 with st.expander('Delete a Listed Property'):
-    delete_id = st.number_input(
-        'Property ID to Delete', min_value=1, format='%d'
-    )
+    delete_id = st.number_input('Property ID to Delete', min_value=1, format='%d')
     if st.button('Delete'):
-        response = requests.delete(f'http://backend:8000/property/{delete_id}')
+        response = requests.delete(f'{BACKEND_URL}/property/{delete_id}')
         show_response_message(response)
 
-
+# Update a property
 with st.expander('Update a Listed Property'):
     with st.form('update_property'):
         new_data = {}
-
-        new_data['id'] = st.number_input(
-            'Property ID', min_value=1, format='%d'
-        )
+        new_data['id'] = st.number_input('Property ID', min_value=1, format='%d')
         new_data['description'] = st.text_input('New Property Description')
         new_data['number_bedrooms'] = st.selectbox(
             'New Number of Bedrooms',
             ['T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T6+'],
         )
-        new_data['price'] = st.number_input(
-            'New Price',
-            min_value=0.01,
-            format='%f',
-        )
+        new_data['price'] = st.number_input('New Price', min_value=0.01, format='%f')
         new_data['area'] = st.number_input('New Area')
         new_data['location'] = st.text_input('New Location')
 
         update_button = st.form_submit_button('Update Property')
-
         if update_button:
-            update_data = {
-                key: value for key, value in new_data.items() if value
-            }
-
+            update_data = {key: value for key, value in new_data.items() if value}
             if update_data:
                 response = requests.patch(
-                    f"http://backend:8000/property/{update_data.get('id')}",
+                    f"{BACKEND_URL}/property/{update_data.get('id')}",
                     json=update_data,
                 )
-
                 show_response_message(response)
             else:
-                st.error(
-                    'No changes were made as none of the fields were filled'
-                )
+                st.error('No changes were made as none of the fields were filled')
