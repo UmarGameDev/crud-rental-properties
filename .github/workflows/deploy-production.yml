@@ -1,0 +1,19 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Railway Deploy
+        run: |
+          curl -X POST "https://backboard.railway.app/project/YOUR_PROJECT_ID_HERE/deploy" \
+               -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}"
+
+      - name: Deploy Success
+        if: success()
+        run: echo "Production deployed!"
